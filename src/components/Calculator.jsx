@@ -1,11 +1,39 @@
 import React, { useState } from 'react';
 import './Calculator.css';
+import { parseFile, extractSalaryData } from '../utils/FileParser';
 
 const Calculator = () => {
     const [basicSalary, setBasicSalary] = useState('');
     const [da, setDa] = useState('');
     const [years, setYears] = useState('');
     const [gratuity, setGratuity] = useState(null);
+    const [isParsing, setIsParsing] = useState(false);
+    const [parseError, setParseError] = useState(null);
+
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setIsParsing(true);
+        setParseError(null);
+
+        try {
+            const text = await parseFile(file);
+            const { basic, da } = extractSalaryData(text);
+
+            if (basic) setBasicSalary(basic.toString());
+            if (da) setDa(da.toString());
+
+            if (!basic && !da) {
+                setParseError('Could not find "Basic Salary" or "DA" in the document. Please enter manually.');
+            }
+        } catch (error) {
+            console.error('Parsing error:', error);
+            setParseError(`Error parsing file: ${error.message || 'Unknown error'}. Please try another file.`);
+        } finally {
+            setIsParsing(false);
+        }
+    };
 
     const calculateGratuity = () => {
         const basic = parseFloat(basicSalary);
@@ -34,6 +62,23 @@ const Calculator = () => {
         <div className="calculator-container">
             <div className="calculator-card">
                 <h2>Gratuity Calculator</h2>
+
+                <div className="file-upload-section">
+                    <label className="file-upload-label">
+                        <span>Upload Salary Slip (PDF/Word)</span>
+                        <input
+                            type="file"
+                            accept=".pdf,.docx"
+                            onChange={handleFileUpload}
+                            disabled={isParsing}
+                        />
+                    </label>
+                    {isParsing && <p className="status-text">Parsing file...</p>}
+                    {parseError && <p className="error-text">{parseError}</p>}
+                </div>
+
+                <div className="divider">OR</div>
+
                 <div className="input-group">
                     <label htmlFor="basic">Monthly Basic Salary</label>
                     <input
